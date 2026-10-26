@@ -17,3 +17,6 @@ def upload():
     blob = client.bucket(BUCKET).blob("from-app.txt")
     blob.upload_from_string("written by the app")
     return {"uploaded": "from-app.txt"}
+@app.route("/health")
+def health():
+    return {"status": "ok"}

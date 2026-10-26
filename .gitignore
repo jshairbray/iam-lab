@@ -4,3 +4,4 @@ __pycache__/
 test.txt
 q1.txt
 secret.txt
+.pytest_cache/
