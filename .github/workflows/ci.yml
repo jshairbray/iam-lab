@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  IMAGE: us-central1-docker.pkg.dev/optical-victor-512121-c1/iam-lab/iam-lab
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -25,14 +28,34 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v7
 
       - name: Build image
-        run: docker build -t iam-lab:${{ github.sha }} .
+        run: docker build -t $IMAGE:${{ github.sha }} .
 
       - name: Smoke test
         run: |
-          docker run -d --name app -p 8080:8080 -e PORT=8080 -e BUCKET=test-bucket iam-lab:${{ github.sha }}
+          docker run -d --name app -p 8080:8080 -e PORT=8080 -e BUCKET=test-bucket $IMAGE:${{ github.sha }}
           curl --fail --retry 10 --retry-all-errors --retry-delay 1 http://localhost:8080/health
           docker rm -f app
+
+      - name: Log in to Google Cloud
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/25145588926/locations/global/workloadIdentityPools/github/providers/github
+          service_account: gh-ci-deployer@optical-victor-512121-c1.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Push image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+          docker push $IMAGE:${{ github.sha }}
