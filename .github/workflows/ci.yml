@@ -21,3 +21,18 @@ jobs:
       - run: pip install -r requirements-dev.txt
 
       - run: pytest -q
+
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build image
+        run: docker build -t iam-lab:${{ github.sha }} .
+
+      - name: Smoke test
+        run: |
+          docker run -d --name app -p 8080:8080 -e PORT=8080 -e BUCKET=test-bucket iam-lab:${{ github.sha }}
+          curl --fail --retry 10 --retry-connrefused --retry-delay 1 http://localhost:8080/health
+          docker rm -f app
