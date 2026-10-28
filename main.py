@@ -19,4 +19,4 @@ def upload():
     return {"uploaded": "from-app.txt"}
 @app.route("/health")
 def health():
-    return {"status": "ok"}
+    return {"status": "broken"}
