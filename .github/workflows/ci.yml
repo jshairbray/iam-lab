@@ -59,3 +59,29 @@ jobs:
         run: |
           gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
           docker push $IMAGE:${{ github.sha }}
+
+  deploy:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Log in to Google Cloud
+        uses: google-github-actions/auth@v3
+        with:
+          workload_identity_provider: projects/25145588926/locations/global/workloadIdentityPools/github/providers/github
+          service_account: gh-ci-deployer@optical-victor-512121-c1.iam.gserviceaccount.com
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy iam-lab \
+            --image=$IMAGE:${{ github.sha }} \
+            --region=us-central1 \
+            --service-account=iam-lab-app@optical-victor-512121-c1.iam.gserviceaccount.com \
+            --project=optical-victor-512121-c1 \
+            --quiet
